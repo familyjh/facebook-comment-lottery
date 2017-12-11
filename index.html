@@ -1,0 +1,418 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>페이스북 추첨</title>
+    <meta name="viewport" content="width=device-width, user-scalable=no">
+    <script>
+        // appId 를 변경해서 사용해야 합니다.
+        window.fbAsyncInit = function () {
+            FB.init({
+                appId: location.href.indexOf('localhost') === -1 ? '145386116112696' : '817206035109655',
+                cookie: true,
+                xfbml: true,
+                version: 'v2.8'
+            });
+            FB.AppEvents.logPageView();
+            FB.getLoginStatus(function (response) {
+                if (response.status !== 'connected') {
+                    document.getElementById('require_login').style.display = 'block';
+                }
+            });
+        };
+        (function (d, s, id) {
+            var js, fjs = d.getElementsByTagName(s)[0];
+            if (d.getElementById(id)) {
+                return;
+            }
+            js = d.createElement(s);
+            js.id = id;
+            js.src = "//connect.facebook.net/en_US/sdk.js";
+            fjs.parentNode.insertBefore(js, fjs);
+        }(document, 'script', 'facebook-jssdk'));
+        function checkLoginState() {
+            FB.getLoginStatus(function (response) {
+            });
+        }
+        commentList = [];
+        function shuffle(a) {
+            var j, x, i;
+            for (i = a.length; i; i--) {
+                j = Math.floor(Math.random() * i);
+                x = a[i - 1];
+                a[i - 1] = a[j];
+                a[j] = x;
+            }
+        }
+        function fetchComments(next, callback) {
+            if (next === undefined) {
+                shuffle(commentList);
+                var code = commentList.map(function (data, i) {
+                    return "<tr><td>" + (i + 1) + "</td><td><a href=\"https://facebook.com/" + data.id + "\" target=\"_blank\">" + data.name + "</a></td><td>" + data.message + "</td></tr>";
+                });
+                document.getElementById('result-comments').innerHTML = '<table class="ui very basic collapsing celled table"><tbody>' + code.join('') + '</tbody></table>';
+                callback(null, commentList);
+                document.getElementById('result-comment-count').innerHTML = commentList.length;
+                return;
+            }
+            FB.api(
+                next,
+                function (response) {
+                    if (response && !response.error) {
+                        for (var name in response.data) {
+                            var _comment = response.data[name];
+                            if(!_comment.from){
+                                continue;
+                            }
+                            var comment = {};
+                            comment.type = 'comment';
+                            comment.id = _comment.from.id;
+                            comment.name = _comment.from.name;
+                            comment.message = _comment.message;
+                            var isExist = commentList.find(function (data) {
+                                return data.id === comment.id
+                            })
+                            if (!isExist) {
+                                commentList.push(comment);
+                                document.getElementById('result-comment-count').innerHTML = commentList.length;
+                            }
+                        }
+                        fetchComments(response.paging.next, callback);
+                    } else {
+                        var msg = response.error.message;
+                        switch (response.error.code) {
+                            case 100:
+                                msg = '입력값이 올바른지 확인해주세요.\n' + msg;
+                                break;
+                            case 104:
+                                msg = '페이스북 로그인을 먼저 해주세요.\n' + msg;
+                        }
+                        alert('깜짝이야! 에러가 발생했습니다! \n' + msg);
+                    }
+                }
+            );
+        }
+        function fetchSharedposts(next, callback) {
+            if (next === undefined) {
+                shuffle(sharedpostList);
+                var code = sharedpostList.map(function (data, i) {
+                    return "<tr><td>" + (i + 1) + "</td><td><a href=\"https://facebook.com/" + data.id + "\" target=\"_blank\">" + data.name + "</a></td></tr>";
+                });
+                document.getElementById('result-sharedposts').innerHTML = '<table class="ui very basic collapsing celled table"><tbody>' + code.join('') + '</tbody></table>';
+                callback(null, sharedpostList);
+                document.getElementById('result-sharedpost-count').innerHTML = sharedpostList.length;
+                return;
+            }
+            FB.api(
+                next,
+                function (response) {
+                    if (response && !response.error) {
+                        for (var name in response.data) {
+                            var _sharedpost = response.data[name];
+                            var sharedpost = {};
+                            sharedpost.type = 'sharedpost';
+                            sharedpost.id = _sharedpost.from.id;
+                            sharedpost.name = _sharedpost.from.name;
+                            sharedpost.message = _sharedpost.message;
+                            var isExist = sharedpostList.find(function (data) {
+                                return data.id === sharedpost.id
+                            })
+                            if (!isExist) {
+                                sharedpostList.push(sharedpost);
+                                document.getElementById('result-sharedpost-count').innerHTML = sharedpostList.length;
+                            }
+                        }
+                        var next = response.paging ? response.paging.next : undefined;
+                        fetchSharedposts(next, callback);
+                    } else {
+                        var msg = response.error.message;
+                        switch (response.error.code) {
+                            case 100:
+                                msg = '입력값이 올바른지 확인해주세요.\n' + msg;
+                                break;
+                            case 104:
+                                msg = '페이스북 로그인을 먼저 해주세요.\n' + msg;
+                        }
+                        alert('깜짝이야! 에러가 발생했습니다! \n' + msg);
+                    }
+                }
+            );
+        }
+        function fetchLikes(next, callback) {
+            if (next === undefined) {
+                shuffle(likeList);
+                var code = likeList.map(function (data, i) {
+                    return "<tr><td>" + (i + 1) + "</td><td><a href=\"https://facebook.com/" + data.id + "\" target=\"_blank\">" + data.name + "</a></td></tr>";
+                });
+                document.getElementById('result-likes').innerHTML = '<table class="ui very basic collapsing celled table"><tbody>' + code.join('') + '</tbody></table>';
+                document.getElementById('result-like-count').innerHTML = likeList.length;
+                callback(null, likeList);
+                return;
+            }
+            FB.api(
+                next,
+                function (response) {
+                    if (response && !response.error) {
+                        for (var name in response.data) {
+                            var item = response.data[name];
+                            item.type = 'like';
+                            likeList.push(item);
+                            document.getElementById('result-like-count').innerHTML = likeList.length;
+                        }
+                        // fetchComments(undefined);
+                        fetchLikes(response.paging.next, callback);
+                    } else {
+                        var msg = response.error.message;
+                        switch (response.error.code) {
+                            case 100:
+                                msg = '입력값이 올바른지 확인해주세요.\n' + msg;
+                                break;
+                            case 104:
+                                msg = '페이스북 로그인을 먼저 해주세요.\n' + msg;
+                        }
+                        alert('깜짝이야! 에러가 발생했습니다! \n' + msg);
+                    }
+                }
+            );
+        }
+        function parseURL(url) {
+            var parser = document.createElement('a'),
+                searchObject = {},
+                queries, split, i;
+            // Let the browser do the work
+            parser.href = url;
+            // Convert query string to object
+            queries = parser.search.replace(/^\?/, '').split('&');
+            for (i = 0; i < queries.length; i++) {
+                split = queries[i].split('=');
+                searchObject[split[0]] = split[1];
+            }
+            return {
+                protocol: parser.protocol,
+                host: parser.host,
+                hostname: parser.hostname,
+                port: parser.port,
+                pathname: parser.pathname,
+                search: parser.search,
+                searchObject: searchObject,
+                hash: parser.hash
+            };
+        }
+        function getCall() {
+            var parser = parseURL($('#src').val().trim());
+            if (parser.host.indexOf('facebook.com') !== -1) {
+                var matchs = parser.pathname.match(/\/groups\/(.+?)\/permalink\/([0-9]+)/);
+                if(!matchs){
+                    var matchs = $('#src').val().trim().match(/facebook\.com\/([0-9]+)\/photos\/.+?\/([0-9]+)\//);
+                }
+                if (matchs) {
+                    var groupId = matchs[1];
+                    var pageId = matchs[2];
+                    return {
+                        'comments': pageId + '/comments',
+                        'likes': pageId + '/likes?fields=name',
+                        'sharedposts': pageId + '/sharedposts?fields=from'
+                    };
+                } else if (parser.searchObject.story_fbid) {
+                    return {
+                        'comments': parser.searchObject.id + '_' + parser.searchObject.story_fbid + '/comments?limit=100',
+                        'likes': parser.searchObject.id + '_' + parser.searchObject.story_fbid + '/likes?limit=100',
+                        'sharedposts': parser.searchObject.id + '_' + parser.searchObject.story_fbid + '/sharedposts?limit=100',
+                    }
+                }
+            }
+        }
+        function resetResult() {
+            document.getElementById('result-comment-count').innerHTML = 0;
+            document.getElementById('result-like-count').innerHTML = 0;
+//            document.getElementById('result-sharedpost-count').innerHTML = 0;
+            document.getElementById('result-sum-count').innerHTML = 0;
+        }
+        function lottery() {
+            $('#result_wrap').show();
+            resetResult();
+            commentList = [];
+            likeList = [];
+            sharedpostList = [];
+            var calls = getCall();
+            if (calls) {
+                $('#result').innerHTML = '';
+                async.parallel([
+                    function (callback) {
+                        fetchComments(calls.comments, callback);
+                    },
+                    function (callback) {
+                        fetchLikes(calls.likes, callback);
+                    },
+                    function (callback) {
+                        callback(null, []);
+//                        fetchSharedposts(calls.sharedposts, callback);
+                    }
+                ], function (err, results) {
+                    var merged = results[0].concat(results[1], results[2]);
+                    shuffle(merged);
+                    var code = merged.map(function (data, i) {
+                        return "<tr class=\"" + data.type + "\"><td>" + (i + 1) + "</td><td><a href=\"https://facebook.com/" + data.id + "\" target=\"_blank\">" + data.name + "</a></td><td>" + data.type + "</td></tr>";
+                    });
+                    document.getElementById('result-sum').innerHTML = '<table class="ui very basic collapsing celled table"><tbody>' + code.join('') + '</tbody></table>';
+                    document.getElementById('result-sum-count').innerHTML = merged.length;
+                });
+            }
+        }
+    </script>
+    <style>
+        * {
+            font-family: 'Spoqa Han Sans', 'Sans-serif' !important;
+        }
+        .container{
+            margin-bottom: 7rem;
+        }
+        h1 {
+            font-size: 5rem !important;
+            font-weight: 100 !important;
+            text-align: center !important;
+            padding-top: 4rem !important;
+            padding-bottom: 8rem !important;
+        }
+        h2 {
+            font-weight: 100 !important;
+            font-size: 3rem !important;
+        }
+        p {
+            margin-bottom: 10rem !important;
+        }
+        .start {
+            display: inline-block;
+            text-align: center !important;
+            padding-top: 7rem;
+        }
+        .em1 {
+            color: red;
+        }
+        .em2 {
+            color: blue;
+        }
+        .em3 {
+            font-size: 6rem;
+        }
+        #login {
+            display: none;
+        }
+        #result_wrap{
+            margin-top: 7rem;
+            display:none;
+        }
+    </style>
+    <!-- Google Fonts -->
+    <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Roboto:300,300italic,700,700italic">
+    <!-- CSS Reset -->
+    <link rel="stylesheet" href="//cdn.rawgit.com/necolas/normalize.css/master/normalize.css">
+    <script
+            src="https://code.jquery.com/jquery-2.2.4.min.js"
+            integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44="
+            crossorigin="anonymous"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.2.13/semantic.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.2.13/semantic.min.js"></script>
+
+    <!-- You should properly set the path from the main file. -->
+    <link href='//spoqa.github.io/spoqa-han-sans/css/SpoqaHanSans-kr.css' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="buttons.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/async/2.5.0/async.min.js"></script>
+</head>
+
+<body>
+<div class="ui container">
+    <div class="">
+        <h1>페이스북 추첨</h1>
+
+        <!--
+        <h2>소개</h2>
+        <p>
+            이 서비스는 생활코딩 페이스북 그룹의 <a href="https://www.facebook.com/groups/codingeverybody/permalink/1802935303080331"
+                                    target="_blank">공익이벤트</a>에 참여한 분들을 추첨하기 위해서 만들어진 것을 좀 더 많은 분들이 사용할 수 있도록 개선한 것입니다.
+        </p>
+        <div id="login">
+            <h2>로그인</h2>
+            <p>
+                이 서비스는 로그인을 필요로 합니다. 로그인을 하는 이유는 페이스북에 접근해서 댓글 정보를 가져오기 위해서는 기본적인 인증(access token)이 필요하기 때문입니다. 로그인 외에
+                어떤
+                정보도
+                수집하지 않습니다. <strong><u>이렇게 말하는 서비스가 있다면 항상 의심하셔야 합니다.</u></strong> 그래서 아래처럼 소스코드를 공개합니다. 보안적인 문제가 있는지를
+                주변에 계신
+                개발자에게 문의해보고 사용하세요. 항상 의심하세요.
+                ^^
+                <a href="https://github.com/egoing/comment-lottery"
+                   target="_blank">https://github.com/egoing/comment-lottery</a>
+                <br><br>
+                <span class="fb-login-button" data-max-rows="1" data-size="large" data-button-type="continue_with"
+                      data-show-faces="false" data-auto-logout-link="false" data-use-continue-as="false"></span>
+            </p>
+        </div>
+
+        <h2>이 서비스를 만드는 법</h2>
+        <p>
+            이런 서비스를 만들고 싶다면 <a href="https://opentutorials.org/course/2897/17711" target="_blank">https://opentutorials.org/course/2897/17711</a>를
+            참고하세요.
+        </p>
+        //-->
+
+
+        <h2>주소</h2>
+        아래의 형식에 맞는 주소를 사용해주세요.
+        <table class="ui celled padded table">
+            <tr>
+                <td id="table-type">구분</td>
+                <td>페북글의 주소</td>
+            </tr>
+            <tr>
+                <td>그룹</td>
+                <td>https://www.facebook.com/groups/codingeverybody/permalink/<span class="em1">1801616463212215</span>
+                </td>
+            </tr>
+            <tr>
+                <td>페이지</td>
+                <td>https://www.facebook.com/permalink.php?story_fbid=<span
+                        class="em2">1440324862722276</span>&amp;id=<span
+                        class="em1">218158748272233</span></td>
+            </tr>
+        </table>
+        <div class="ui form">
+            <input type="text" id="src" placeholder="형식에 맞게 주소를 적어주세요."
+                   value="">
+            <div class="start">
+                <button class="button button-3d button-primary button-rounded button-giant"
+                        onclick="lottery();return false;">추첨!
+                </button>
+            </div>
+        </div>
+
+        <div id="result_wrap">
+            <div class="ui top attached tabular menu " id="result">
+                <a class="active item" data-tab="comment">댓글(<span id="result-comment-count">0</span>)</a>
+                <a class="item" data-tab="like">좋아요(<span id="result-like-count">0</span>)</a>
+                <!--<a class="item" data-tab="sharedpost">공유하기(<span id="result-sharedpost-count">0</span>)</a>-->
+                <a class="item" data-tab="all">모두(<span id="result-sum-count">0</span>)</a>
+            </div>
+            <div class="ui bottom attached active tab segment" data-tab="comment" id="result-comments"></div>
+            <div class="ui bottom attached tab segment" data-tab="like" id="result-likes"></div>
+            <!--<div class="ui bottom attached tab segment" data-tab="sharedpost" id="result-sharedposts"></div>-->
+            <div class="ui bottom attached tab segment" data-tab="all" id="result-sum"></div>
+            <script>
+                $('.menu .item')
+                    .tab()
+                ;
+            </script>
+        </div>
+
+
+    </div>
+
+
+</div>
+
+
+</body>
+
+</html>
